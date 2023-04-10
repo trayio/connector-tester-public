@@ -11,6 +11,7 @@ import FormLabel from "@mui/material/FormLabel";
 import jsonata from "jsonata";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { API_URL, PARTNER_NAME, AUTH_DIALOG_URL } from "./config";
+import { openAuthWindow } from "./AuthWindow";
 
 export default function App() {
   const [connectorsList, setConnectorsList] = useState([]);
@@ -53,6 +54,10 @@ export default function App() {
     scopes: []
   });
   const [authType, setAuthType] = useState("existing");
+  const [authError, setAuthError] = useState({
+    show: false,
+    message: ""
+  })
 
   useEffect(() => {
     if (connectorVersionsList.length !== 0)
@@ -76,6 +81,10 @@ export default function App() {
           <input
             type="password"
             onBlur={async (e) => {
+              setAuthError({
+                show: false,
+                message: "",
+              });
               setToken(e.target.value);
               getUserId(e.target.value);
               getAuthentications(e.target.value);
@@ -116,6 +125,10 @@ export default function App() {
                   authentications
                 );
                 setShowAPIresponse(false);
+                setAuthError({
+                  show: false,
+                  message: "",
+                });
               }}
             >
               <option value="" key="default">
@@ -162,6 +175,10 @@ export default function App() {
                   authentications
                 );
                 setShowAPIresponse(false);
+                setAuthError({
+                  show: false,
+                  message: "",
+                });
               }}
             >
               <option value="" key="default">
@@ -271,6 +288,10 @@ export default function App() {
                   title: JSON.parse(e.target.value).title,
                   scopes: JSON.parse(e.target.value).scopes,
                 });
+                setAuthError({
+                  show: false,
+                  message: "",
+                });
               }}
             >
               <option value="" key="default">
@@ -292,9 +313,34 @@ export default function App() {
               })}
             </select>
             <br />
-            <button style={{ width: "128px" }} onClick={openAuthDialog}>
-              Create Auth
-            </button>
+            <div>
+              <button
+                style={{ width: "128px" }}
+                onClick={async (e) => {
+                  const json = await generateAuthCode();
+                  if (json.data) openAuthDialog(json);
+                  else
+                    setAuthError({
+                      show: true,
+                      message: json?.errors[0]?.message,
+                    });
+                }}
+              >
+                Create Auth
+              </button>
+              &nbsp;&nbsp;
+              <span style={{ color: "rgb(74, 84, 245)" }}>
+                After creating auth, click on use existing auth to and select it
+                from dropdown
+              </span>
+            </div>
+
+            {authError.show && (
+              <>
+                <br />
+                <strong style={{ color: "red" }}>{authError.message}</strong>
+              </>
+            )}
           </div>
         )}
         <div className="row">
@@ -498,7 +544,14 @@ export default function App() {
               }
             ></button>
             <main id="responseContainer">
-              <pre style={{ background: "#f5f5f5", fontSize: 16, padding: 15, margin: 0}}>
+              <pre
+                style={{
+                  background: "#f5f5f5",
+                  fontSize: 16,
+                  padding: 15,
+                  margin: 0,
+                }}
+              >
                 <code>{JSON.stringify(APIresponse, null, 4)}</code>
               </pre>
             </main>
@@ -718,11 +771,7 @@ export default function App() {
     }
   }
 
-  async function openAuthDialog() {
-    let scopes = await jsonata(`$join(scope, "&scopes[]=")`).evaluate(
-      selectedServiceEnvironment.scopes
-    );
-    scopes = (scopes !== undefined) ? scopes : "";
+  async function generateAuthCode() {
     const body = {
       userId: userId,
     };
@@ -738,18 +787,25 @@ export default function App() {
       }
     );
     const json = await response.json();
-    const authDialogURL = `https://${AUTH_DIALOG_URL}/external/auth/create/${PARTNER_NAME}?code=${json.data.generateAuthorizationCode.authorizationCode}&serviceId=${serviceId.current}&serviceEnvironmentId=${selectedServiceEnvironment.id}&scopes[]=${scopes}`;
-    window.open(authDialogURL, "_blank", "width=500,height=500,scrollbars=no");
+    return json;
+  }
+
+  async function openAuthDialog(json) {
+    let scopes = await jsonata(`$join(scope, "&scopes[]=")`).evaluate(
+      selectedServiceEnvironment.scopes
+    );
+    scopes = scopes !== undefined ? scopes : "";
+    const authDialogURL = `https://${AUTH_DIALOG_URL}/external/auth/create/${PARTNER_NAME}?code=${json.data?.generateAuthorizationCode?.authorizationCode}&serviceId=${serviceId.current}&serviceEnvironmentId=${selectedServiceEnvironment.id}&scopes[]=${scopes}`;
+    openAuthWindow(authDialogURL);
   }
 }
 
 async function copyCode(id, button) {
   let code, text;
-  if (id !== "requestPayloadContainer") {
+  if (id === "responseContainer") {
     code = document.querySelector(`#${id}>pre>code`);
     text = code.innerText;
-  }
-  else {
+  } else {
     code = document.querySelector(`.w-tc-editor-text`);
     text = code.textContent;
   }
