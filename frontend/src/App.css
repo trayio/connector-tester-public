@@ -136,3 +136,8 @@ button[type="submit"] {
   padding: 4px;
   z-index: 1;
 }
+
+.test-user{
+  background: #E0EAFB;
+  color: #5C94EC
+}

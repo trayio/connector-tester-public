@@ -1,6 +1,6 @@
 import "./App.css";
 import axios from "axios";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useReducer } from "react";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/mui";
 import { copyButtonIcon, copiedIcon, trayLogo } from "./icons";
@@ -25,7 +25,7 @@ export default function App() {
   const [inputSchema, setInputSchema] = useState({});
   const inputSchemaRef = useRef({});
   const [inputObject, setInputObject] = useState({});
-  const [token, setToken] = useState("");
+  const token = useRef("");
   const [authentications, setAuthentications] = useState([]);
   const [connectorAuthentications, setConnectorAuthentications] = useState([]);
   const [selectedAuthentication, setSelectedAuthentication] = useState({
@@ -54,17 +54,32 @@ export default function App() {
     scopes: []
   });
   const [authType, setAuthType] = useState("existing");
+  const [userType, setUserType] = useState("existingUser");
   const [authError, setAuthError] = useState({
     show: false,
     message: ""
   })
+  const [endUsers, setEndUsers] = useState([]);
+
+  useEffect(() => {
+    if (userType === "existingUser") {
+      getUsers();
+    }
+    if (userType === "admin") {
+      getToken("admin");
+      getUserId(token.current);
+      getAuthentications(token.current);
+      if(connectorsList.length===0)
+        getConnectors(token.current);
+    }
+  }, [userType])
 
   useEffect(() => {
     if (connectorVersionsList.length !== 0)
       getConnectorOperations(
         selectedConnectorName,
         connectorVersionsList[0],
-        token
+        token.current
       );
   }, [selectedConnectorName]);
 
@@ -76,22 +91,123 @@ export default function App() {
           dangerouslySetInnerHTML={{ __html: trayLogo }}
         ></div>
         <h1>CAPI form builder demo</h1>
-        <div className="row">
-          <label className="label">Enter user token</label>
-          <input
-            type="password"
-            onBlur={async (e) => {
-              setAuthError({
-                show: false,
-                message: "",
-              });
-              setToken(e.target.value);
-              getUserId(e.target.value);
-              getAuthentications(e.target.value);
-              getConnectors(e.target.value);
+        <div className="row" style={{ marginTop: "0" }}>
+          <FormLabel
+            id="radio-buttons-group"
+            style={{
+              color: "#000",
+              fontWeight: "900",
+              marginBottom: "10px",
+              fontSize: "1.2rem",
             }}
-          />
+          >
+            Continue as admin or end user or create a new end user:
+          </FormLabel>
+          <RadioGroup
+            aria-labelledby="radio-buttons-group"
+            defaultValue="existingUser"
+            name="radio-buttons-group"
+            value={userType}
+            onChange={(e) => setUserType(e.target.value)}
+          >
+            <FormControlLabel
+              value="admin"
+              control={<Radio />}
+              label="Continue as Org admin"
+            />
+            <FormControlLabel
+              value="existingUser"
+              control={<Radio />}
+              label="Choose existing user"
+            />
+            <FormControlLabel
+              value="newUser"
+              control={<Radio />}
+              label="Create new user*"
+            />
+          </RadioGroup>
         </div>
+        {userType === "existingUser" && (
+          <div className="row">
+            {endUsers.length > 0 && (
+              <>
+                <label className="label">Select user</label>
+                <select
+                  defaultValue=""
+                  onChange={async (e) => {
+                    setUserId(JSON.parse(e.target.value).id);
+                    await getToken(JSON.parse(e.target.value).id);
+                    await getAuthentications(token.current);
+                    getConnectorAuthentications(
+                      serviceName.current,
+                      serviceVersion.current,
+                      authentications
+                    );
+                    if (connectorsList.length === 0) {
+                      getConnectors(token.current);
+                    }
+                  }}
+                >
+                  <option value="" key="default">
+                    Select user
+                  </option>
+                  {endUsers.map((option, index) => {
+                    return (
+                      <option
+                        value={JSON.stringify({
+                          id: option.id,
+                          name: option.name,
+                          externalUserId: option.externalUserId,
+                          isTestUser: option.isTestUser,
+                        })}
+                        key={option.id}
+                        className={`${
+                          option.isTestUser ? "test-user" : "normal-user"
+                        }`}
+                      >
+                        {option.name}
+                        {"       "}
+                        {option.externalUserId}
+                      </option>
+                    );
+                  })}
+                </select>
+              </>
+            )}
+          </div>
+        )}
+        {userType === "newUser" && (
+          <div className="row">
+            <span style={{ color: "rgb(74, 84, 245)" }}>
+              *After creating the user, Select the newly created user from 'Select
+              user' dropdown
+            </span>
+            <br />
+            <Form
+              schema={{
+                type: "object",
+                properties: {
+                  name: {
+                    type: "string",
+                    description: "Name of the end user",
+                    title: "Name",
+                  },
+                  externalUserId: {
+                    type: "string",
+                    description: "External ID of the end user",
+                    title: "External ID",
+                  },
+                },
+                required: ["name", "externalUserId"],
+              }}
+              validator={validator}
+              onSubmit={async (e) => {
+                await createExternalUser(e.formData);
+                setUserType("existingUser");
+              }}
+            />
+          </div>
+        )}
         <div className="connectorsRow">
           <div className="row">
             <label className="label">Connector name</label>
@@ -153,7 +269,7 @@ export default function App() {
                 getConnectorOperations(
                   selectedConnectorName,
                   e.target.value,
-                  token
+                  token.current
                 );
                 setSelectedOperation("");
                 setInputObject({});
@@ -229,7 +345,7 @@ export default function App() {
             <FormControlLabel
               value="new"
               control={<Radio />}
-              label="Create new auth"
+              label="Create new auth*"
             />
           </RadioGroup>
         </div>
@@ -250,6 +366,22 @@ export default function App() {
                       ...callConnectorPayload,
                       authId: JSON.parse(e.target.value).id,
                     });
+                    if (selectedOperation) {
+                      for (let key in inputSchemaRef.current.properties) {
+                        await populateDDLSchema(inputSchemaRef.current, key);
+                      }
+                      const onlyRequired = {
+                        type: "object",
+                        properties: {},
+                        required: inputSchema.required,
+                      };
+                      inputSchemaRef.current.required.map((key) => {
+                        onlyRequired.properties[key] =
+                          inputSchemaRef.current.properties[key];
+                      });
+                      setRequiredSchema(onlyRequired);
+                      setInputSchema(inputSchemaRef.current);
+                    }
                   }}
                 >
                   <option value="" key="default">
@@ -279,6 +411,11 @@ export default function App() {
           </div>
         ) : (
           <div className="row">
+            <span style={{ color: "rgb(74, 84, 245)" }}>
+              *After creating auth, Select the newly created auth from 'Select
+              Auth' dropdown
+            </span>
+            <br />
             <label className="label">Select service environment</label>
             <select
               defaultValue=""
@@ -313,28 +450,20 @@ export default function App() {
               })}
             </select>
             <br />
-            <div>
-              <button
-                style={{ width: "128px" }}
-                onClick={async (e) => {
-                  const json = await generateAuthCode();
-                  if (json.data) openAuthDialog(json);
-                  else
-                    setAuthError({
-                      show: true,
-                      message: json?.errors[0]?.message,
-                    });
-                }}
-              >
-                Create Auth
-              </button>
-              &nbsp;&nbsp;
-              <span style={{ color: "rgb(74, 84, 245)" }}>
-                After creating auth, click on use existing auth to and select it
-                from dropdown
-              </span>
-            </div>
-
+            <button
+              style={{ width: "128px" }}
+              onClick={async (e) => {
+                const json = await generateAuthCode();
+                if (json.data) openAuthDialog(json);
+                else
+                  setAuthError({
+                    show: true,
+                    message: json?.errors[0]?.message,
+                  });
+              }}
+            >
+              Create Auth
+            </button>
             {authError.show && (
               <>
                 <br />
@@ -476,7 +605,7 @@ export default function App() {
                 setRequiredSchema(onlyRequired);
               }}
               onSubmit={(e) => {
-                callConnector(token);
+                callConnector(token.current);
                 setShowAPIresponse(true);
               }}
             />
@@ -561,6 +690,50 @@ export default function App() {
     </div>
   );
 
+  async function getUsers() {
+    const response = await fetch(`${API_URL}/users`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      }
+    });
+    const json = await response.json();
+    const users = await jsonata('$.{"id": node.id,"name": node.name,"externalUserId": node.externalUserId,"isTestUser": node.isTestUser}').evaluate(json?.data?.users?.edges); 
+    setEndUsers(users);
+  }
+
+  async function getToken(userId) {
+    const body = {
+      userId: userId,
+    };
+    const response = await fetch(`${API_URL}/userToken`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json();
+    token.current = json.accessToken;
+  }
+
+  async function createExternalUser(createUserFormData) {
+    const { name, externalUserId } = createUserFormData;
+    const body = {
+      name: name,
+      externalUserId: externalUserId
+    };
+    const response = await fetch(`${API_URL}/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json();
+    return json;
+  }
+
   async function getUserId(bearerToken) {
     const config = {
       headers: {
@@ -574,7 +747,7 @@ export default function App() {
   async function getServiceEnvironments(serviceName, serviceVersion) {
     const config = {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token.current}`,
       },
     };
     const res = await axios.get(
@@ -686,7 +859,7 @@ export default function App() {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token.current}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(body),
@@ -746,7 +919,7 @@ export default function App() {
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${token.current}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify(body),
@@ -780,8 +953,7 @@ export default function App() {
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(body),
       }
@@ -796,7 +968,9 @@ export default function App() {
     );
     scopes = scopes !== undefined ? scopes : "";
     const authDialogURL = `https://${AUTH_DIALOG_URL}/external/auth/create/${PARTNER_NAME}?code=${json.data?.generateAuthorizationCode?.authorizationCode}&serviceId=${serviceId.current}&serviceEnvironmentId=${selectedServiceEnvironment.id}&scopes[]=${scopes}`;
-    openAuthWindow(authDialogURL);
+    const authId = openAuthWindow(authDialogURL);
+    if (typeof authId === "string")
+      setAuthType("existing")
   }
 }
 

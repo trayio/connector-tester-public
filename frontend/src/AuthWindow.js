@@ -18,6 +18,7 @@ export const openAuthWindow = (url) => {
       e.data.type === "tray.authpopup.finish"
     ) {
       authWindow.close();
+      return e.data.authId
     }
   };
   window.addEventListener("message", onmessage);
@@ -33,5 +34,5 @@ export const openAuthWindow = (url) => {
   };
 
   checkClosedWindow();
-    authWindow.location = url;
+  authWindow.location = url;
 };
