@@ -128,3 +128,16 @@ button:hover {
 button[type="submit"] {
   padding: 4px 16px !important;
 }
+
+.copyButton{
+  position: absolute;
+  top: 3rem;
+  right: 0.5rem;
+  padding: 4px;
+  z-index: 1;
+}
+
+.test-user{
+  background: #E0EAFB;
+  color: #5C94EC
+}
