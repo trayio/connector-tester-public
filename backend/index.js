@@ -16,14 +16,18 @@ app.get("/test", async (req, res) => {
 
 app.get("/userId", async (req, res) => {
   const token = req.header("Authorization").split(" ")[1];
-  const response = await fetch("https://api.tray.io/v1/me", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  const json = await response.json();
-  res.status(200).send(json);
+  try {
+    const response = await fetch("https://api.tray.io/v1/me", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const json = await response.json();
+    res.status(200).send(json);
+  } catch (error) {
+    throw new Error(error);
+  }
 });
 
 app.get("/users", async (req, res) => {
@@ -42,9 +46,13 @@ app.get("/users", async (req, res) => {
     redirect: "follow",
   };
 
-  const response = await fetch("https://tray.io/graphql", requestOptions);
-  const json = await response.json();
-  res.status(200).send(json);
+  try {
+    const response = await fetch("https://tray.io/graphql", requestOptions);
+    const json = await response.json();
+    res.status(200).send(json);
+  } catch (error) {
+    throw new Error(error);
+  }
 });
 
 app.post("/users", async (req, res) => {
@@ -65,10 +73,13 @@ app.post("/users", async (req, res) => {
     body: graphql,
     redirect: "follow",
   };
-
-  const response = await fetch("https://tray.io/graphql", requestOptions);
-  const json = await response.json();
-  res.status(200).send(json);
+  try {
+    const response = await fetch("https://tray.io/graphql", requestOptions);
+    const json = await response.json();
+    res.status(200).send(json);
+  } catch (error) {
+    throw new Error(error);
+  }
 });
 
 app.get("/connectors", async (req, res) => {
@@ -79,8 +90,12 @@ app.get("/connectors", async (req, res) => {
       Authorization: `Bearer ${token}`,
     },
   });
-  const json = await response.json();
-  res.status(200).send(json);
+  try {
+    const json = await response.json();
+    res.status(200).send(json);
+  } catch (error) {
+    throw new Error(error);
+  }
 });
 
 app.get(
@@ -88,18 +103,22 @@ app.get(
   async (req, res) => {
     const token = req.header("Authorization").split(" ")[1];
     const { connectorName, connectorVersion } = { ...req.params };
-    const response = await fetch(
-      `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/operations`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    const json = await response.json();
-    res.status(200).send(json);
+    try {
+      const response = await fetch(
+        `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/operations`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const json = await response.json();
+      res.status(200).send(json);
+    } catch (error) {
+      throw new Error(error)
+    }
   }
 );
 
@@ -126,9 +145,13 @@ app.post("/userToken", async (req, res) => {
     redirect: "follow",
   };
 
-  const response = await fetch("https://tray.io/graphql", requestOptions);
-  const json = await response.json();
-  res.status(200).send(json?.data?.authorize);
+  try {
+    const response = await fetch("https://tray.io/graphql", requestOptions);
+    const json = await response.json();
+    res.status(200).send(json?.data?.authorize);
+  } catch (error) {
+    throw new Error(error)
+  }
 });
 
 app.get("/authentications", async (req, res) => {
@@ -149,9 +172,13 @@ app.get("/authentications", async (req, res) => {
     redirect: "follow",
   };
 
-  const response = await fetch("https://tray.io/graphql", requestOptions);
-  const json = await response.json();
-  res.status(200).send(json);
+  try {
+    const response = await fetch("https://tray.io/graphql", requestOptions);
+    const json = await response.json();
+    res.status(200).send(json);
+  } catch (error) {
+    throw new Error(error)
+  }
 });
 
 app.get(
@@ -160,18 +187,22 @@ app.get(
     const token = req.header("Authorization").split(" ")[1];
     const { serviceName, serviceVersion } = { ...req.params };
     if (serviceName && serviceVersion) {
-      const response = await fetch(
-        `https://api.tray.io/core/v1/services/${serviceName}/versions/${serviceVersion}/environments`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const json = await response.json();
-      res.status(200).send(json);
+      try {
+        const response = await fetch(
+          `https://api.tray.io/core/v1/services/${serviceName}/versions/${serviceVersion}/environments`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const json = await response.json();
+        res.status(200).send(json);
+      } catch (error) {
+        throw new Error(error)
+      } 
     }
   }
 );
@@ -192,9 +223,13 @@ app.post("/authCode", async (req, res) => {
     redirect: "follow",
   };
 
-  const response = await fetch("https://tray.io/graphql", requestOptions);
-  const json = await response.json();
-  res.status(200).send(json);
+  try {
+    const response = await fetch("https://tray.io/graphql", requestOptions);
+    const json = await response.json();
+    res.status(200).send(json);
+  } catch (error) {
+    throw new Error(error)
+  }
 });
 
 app.post(
@@ -210,12 +245,16 @@ app.post(
       body: JSON.stringify(req.body),
     };
 
-    const response = await fetch(
-      `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/call`,
-      requestOptions
-    );
-    const json = await response.json();
-    res.status(200).send(json);
+    try {
+      const response = await fetch(
+        `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/call`,
+        requestOptions
+      );
+      const json = await response.json();
+      res.status(200).send(json);
+    } catch (error) {
+      throw new Error(error)
+    }  
   }
 );
 

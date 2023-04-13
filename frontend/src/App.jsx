@@ -60,6 +60,7 @@ export default function App() {
     message: ""
   })
   const [endUsers, setEndUsers] = useState([]);
+  const copyButtonRef = useRef({});
 
   useEffect(() => {
     if (userType === "existingUser") {
@@ -82,6 +83,18 @@ export default function App() {
         token.current
       );
   }, [selectedConnectorName]);
+
+  useEffect(() => {
+    if (authType === "existing" && selectedConnectorName && selectedConnectorVersion)
+      (async () => {
+        await getAuthentications(token.current);
+        getConnectorAuthentications(
+          serviceName.current,
+          serviceVersion.current,
+          authentications
+        );
+      })();
+  }, [authType])
 
   return (
     <div className="main">
@@ -179,8 +192,8 @@ export default function App() {
         {userType === "newUser" && (
           <div className="row">
             <span style={{ color: "rgb(74, 84, 245)" }}>
-              *After creating the user, Select the newly created user from 'Select
-              user' dropdown
+              *After creating the user, Select the newly created user from
+              'Select user' dropdown
             </span>
             <br />
             <Form
@@ -329,11 +342,6 @@ export default function App() {
             name="radio-buttons-group"
             value={authType}
             onChange={(e) => {
-              getConnectorAuthentications(
-                serviceName.current,
-                serviceVersion.current,
-                authentications
-              );
               setAuthType(e.target.value);
             }}
           >
@@ -631,10 +639,11 @@ export default function App() {
               Call connector payload:
             </span>
             <button
+              ref={copyButtonRef}
               className="copyButton"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
               onClick={async (e) =>
-                await copyCode("requestPayloadContainer", e.target)
+                await copyCode("requestPayloadContainer", copyButtonRef)
               }
             ></button>
             <main id="requestPayloadContainer">
@@ -666,10 +675,11 @@ export default function App() {
               API response:
             </span>
             <button
+              ref={copyButtonRef}
               className="copyButton"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
               onClick={async (e) =>
-                await copyCode("responseContainer", e.target)
+                await copyCode("responseContainer", copyButtonRef)
               }
             ></button>
             <main id="responseContainer">
@@ -968,9 +978,7 @@ export default function App() {
     );
     scopes = scopes !== undefined ? scopes : "";
     const authDialogURL = `https://${AUTH_DIALOG_URL}/external/auth/create/${PARTNER_NAME}?code=${json.data?.generateAuthorizationCode?.authorizationCode}&serviceId=${serviceId.current}&serviceEnvironmentId=${selectedServiceEnvironment.id}&scopes[]=${scopes}`;
-    const authId = openAuthWindow(authDialogURL);
-    if (typeof authId === "string")
-      setAuthType("existing")
+    openAuthWindow(authDialogURL);
   }
 }
 
