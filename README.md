@@ -12,11 +12,11 @@ Pre requisites before using this app:
 
 You server would be running on `http://localhost:5001` now.
 
-Now that the server is up and running successfully, you can clone this repository if not done already.
+Now that the server is up and running successfully:
 
 1. Open a new terminal window and switch to frontend folder.
 2. Open config.js file in src folder in frontend directory.
-3. Edit the API_URL to `http://localhost:5001`. Change the PARTNER_NAME to your (embeddedId)[https://tray.io/documentation/embedded/getting-started/embedded-id-and-master-token/]
+3. Edit the API_URL to `http://localhost:5001`. Change the PARTNER_NAME to your [embeddedId](https://tray.io/documentation/embedded/getting-started/embedded-id-and-master-token/)
 4. Run `npm install`
 5. Run `npm run dev`
 

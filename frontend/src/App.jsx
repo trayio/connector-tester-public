@@ -1,6 +1,6 @@
 import "./App.css";
 import axios from "axios";
-import { useEffect, useState, useRef, useReducer } from "react";
+import { useEffect, useState, useRef } from "react";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/mui";
 import { copyButtonIcon, copiedIcon, trayLogo } from "./icons";
@@ -60,6 +60,8 @@ export default function App() {
     message: ""
   })
   const [endUsers, setEndUsers] = useState([]);
+  const requestCopyButtonRef = useRef({});
+  const responseCopyButtonRef = useRef({});
 
   useEffect(() => {
     if (userType === "existingUser") {
@@ -82,6 +84,18 @@ export default function App() {
         token.current
       );
   }, [selectedConnectorName]);
+
+  useEffect(() => {
+    if (authType === "existing" && selectedConnectorName && selectedConnectorVersion)
+      (async () => {
+        await getAuthentications(token.current);
+        getConnectorAuthentications(
+          serviceName.current,
+          serviceVersion.current,
+          authentications
+        );
+      })();
+  }, [authType])
 
   return (
     <div className="main">
@@ -179,8 +193,8 @@ export default function App() {
         {userType === "newUser" && (
           <div className="row">
             <span style={{ color: "rgb(74, 84, 245)" }}>
-              *After creating the user, Select the newly created user from 'Select
-              user' dropdown
+              *After creating the user, Select the newly created user from
+              'Select user' dropdown
             </span>
             <br />
             <Form
@@ -329,11 +343,6 @@ export default function App() {
             name="radio-buttons-group"
             value={authType}
             onChange={(e) => {
-              getConnectorAuthentications(
-                serviceName.current,
-                serviceVersion.current,
-                authentications
-              );
               setAuthType(e.target.value);
             }}
           >
@@ -631,11 +640,18 @@ export default function App() {
               Call connector payload:
             </span>
             <button
+              ref={requestCopyButtonRef}
               className="copyButton"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
-              onClick={async (e) =>
-                await copyCode("requestPayloadContainer", e.target)
-              }
+              onClick={(e) => {
+                navigator.clipboard.writeText(
+                  JSON.stringify(callConnectorPayload, null, 4)
+                );
+                requestCopyButtonRef.current.innerHTML = copiedIcon;
+                setTimeout(() => {
+                  requestCopyButtonRef.current.innerHTML = copyButtonIcon;
+                }, 700);
+              }}
             ></button>
             <main id="requestPayloadContainer">
               <CodeEditor
@@ -666,11 +682,18 @@ export default function App() {
               API response:
             </span>
             <button
+              ref={responseCopyButtonRef}
               className="copyButton"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
-              onClick={async (e) =>
-                await copyCode("responseContainer", e.target)
-              }
+              onClick={async (e) => {
+                navigator.clipboard.writeText(
+                  JSON.stringify(callConnectorPayload, null, 4)
+                );
+                responseCopyButtonRef.current.innerHTML = copiedIcon;
+                setTimeout(() => {
+                  responseCopyButtonRef.current.innerHTML = copyButtonIcon;
+                }, 700);
+              }}
             ></button>
             <main id="responseContainer">
               <pre
@@ -968,25 +991,6 @@ export default function App() {
     );
     scopes = scopes !== undefined ? scopes : "";
     const authDialogURL = `https://${AUTH_DIALOG_URL}/external/auth/create/${PARTNER_NAME}?code=${json.data?.generateAuthorizationCode?.authorizationCode}&serviceId=${serviceId.current}&serviceEnvironmentId=${selectedServiceEnvironment.id}&scopes[]=${scopes}`;
-    const authId = openAuthWindow(authDialogURL);
-    if (typeof authId === "string")
-      setAuthType("existing")
+    openAuthWindow(authDialogURL);
   }
-}
-
-async function copyCode(id, button) {
-  let code, text;
-  if (id === "responseContainer") {
-    code = document.querySelector(`#${id}>pre>code`);
-    text = code.innerText;
-  } else {
-    code = document.querySelector(`.w-tc-editor-text`);
-    text = code.textContent;
-  }
-
-  await navigator.clipboard.writeText(text);
-  button.innerHTML = copiedIcon;
-  setTimeout(() => {
-    button.innerHTML = copyButtonIcon;
-  }, 700);
 }
