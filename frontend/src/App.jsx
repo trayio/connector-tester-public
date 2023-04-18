@@ -1,6 +1,6 @@
 import "./App.css";
 import axios from "axios";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useReducer } from "react";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/mui";
 import { copyButtonIcon, copiedIcon, trayLogo } from "./icons";
@@ -60,8 +60,7 @@ export default function App() {
     message: ""
   })
   const [endUsers, setEndUsers] = useState([]);
-  const requestCopyButtonRef = useRef({});
-  const responseCopyButtonRef = useRef({});
+  const copyButtonRef = useRef({});
 
   useEffect(() => {
     if (userType === "existingUser") {
@@ -640,18 +639,12 @@ export default function App() {
               Call connector payload:
             </span>
             <button
-              ref={requestCopyButtonRef}
+              ref={copyButtonRef}
               className="copyButton"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
-              onClick={(e) => {
-                navigator.clipboard.writeText(
-                  JSON.stringify(callConnectorPayload, null, 4)
-                );
-                requestCopyButtonRef.current.innerHTML = copiedIcon;
-                setTimeout(() => {
-                  requestCopyButtonRef.current.innerHTML = copyButtonIcon;
-                }, 700);
-              }}
+              onClick={async (e) =>
+                await copyCode("requestPayloadContainer", copyButtonRef)
+              }
             ></button>
             <main id="requestPayloadContainer">
               <CodeEditor
@@ -682,18 +675,12 @@ export default function App() {
               API response:
             </span>
             <button
-              ref={responseCopyButtonRef}
+              ref={copyButtonRef}
               className="copyButton"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
-              onClick={async (e) => {
-                navigator.clipboard.writeText(
-                  JSON.stringify(callConnectorPayload, null, 4)
-                );
-                responseCopyButtonRef.current.innerHTML = copiedIcon;
-                setTimeout(() => {
-                  responseCopyButtonRef.current.innerHTML = copyButtonIcon;
-                }, 700);
-              }}
+              onClick={async (e) =>
+                await copyCode("responseContainer", copyButtonRef)
+              }
             ></button>
             <main id="responseContainer">
               <pre
@@ -993,4 +980,21 @@ export default function App() {
     const authDialogURL = `https://${AUTH_DIALOG_URL}/external/auth/create/${PARTNER_NAME}?code=${json.data?.generateAuthorizationCode?.authorizationCode}&serviceId=${serviceId.current}&serviceEnvironmentId=${selectedServiceEnvironment.id}&scopes[]=${scopes}`;
     openAuthWindow(authDialogURL);
   }
+}
+
+async function copyCode(id, button) {
+  let code, text;
+  if (id === "responseContainer") {
+    code = document.querySelector(`#${id}>pre>code`);
+    text = code.innerText;
+  } else {
+    code = document.querySelector(`.w-tc-editor-text`);
+    text = code.textContent;
+  }
+
+  await navigator.clipboard.writeText(text);
+  button.innerHTML = copiedIcon;
+  setTimeout(() => {
+    button.innerHTML = copyButtonIcon;
+  }, 700);
 }
