@@ -68,11 +68,18 @@ export default function App() {
       getUsers();
     }
     if (userType === "admin") {
-      getToken("admin");
-      getUserId(token.current);
-      getAuthentications(token.current);
-      if(connectorsList.length===0)
-        getConnectors(token.current);
+      (async () => {
+        await getToken("admin");
+        await getUserId(token.current);
+        const adminAuths = await getAuthentications(token.current);
+        if(serviceName.current !== "")
+          getConnectorAuthentications(
+            serviceName.current,
+            serviceVersion.current,
+            adminAuths
+          );
+        if (connectorsList.length === 0) getConnectors(token.current);
+      })();
     }
   }, [userType])
 
@@ -143,7 +150,7 @@ export default function App() {
         </div>
         {userType === "existingUser" && (
           <div className="row">
-            {endUsers.length > 0 && (
+            {endUsers.length !== 0 && (
               <>
                 <label className="label">Select user</label>
                 <select
@@ -151,12 +158,13 @@ export default function App() {
                   onChange={async (e) => {
                     setUserId(JSON.parse(e.target.value).id);
                     await getToken(JSON.parse(e.target.value).id);
-                    await getAuthentications(token.current);
-                    getConnectorAuthentications(
-                      serviceName.current,
-                      serviceVersion.current,
-                      authentications
-                    );
+                    const userAuths = await getAuthentications(token.current);
+                    if(serviceName.current !== "")
+                      getConnectorAuthentications(
+                        serviceName.current,
+                        serviceVersion.current,
+                        userAuths
+                      );
                     if (connectorsList.length === 0) {
                       getConnectors(token.current);
                     }
@@ -211,6 +219,11 @@ export default function App() {
                     description: "External ID of the end user",
                     title: "External ID",
                   },
+                  isTestUser: {
+                    type: "boolean",
+                    description: "Do you want to mark this user as Test?",
+                    title: "Mark as test user"
+                  }
                 },
                 required: ["name", "externalUserId"],
               }}
@@ -741,10 +754,11 @@ export default function App() {
   }
 
   async function createExternalUser(createUserFormData) {
-    const { name, externalUserId } = createUserFormData;
+    const { name, externalUserId, isTestUser } = createUserFormData;
     const body = {
       name: name,
-      externalUserId: externalUserId
+      externalUserId: externalUserId,
+      isTestUser: isTestUser
     };
     const response = await fetch(`${API_URL}/users`, {
       method: "POST",
@@ -830,6 +844,7 @@ export default function App() {
     };
     const res = await axios.get(`${API_URL}/authentications`, config);
     setAuthentications(res?.data?.data?.viewer?.authentications?.edges);
+    return res?.data?.data?.viewer?.authentications?.edges;
   }
 
   async function getConnectorAuthentications(

@@ -26,8 +26,10 @@ app.get("/userId", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json);
   } catch (error) {
-    throw new Error(error);
-  }
+    res.status(500).send({
+      message: "Internal server error"
+    });
+  } 
 });
 
 app.get("/users", async (req, res) => {
@@ -51,17 +53,20 @@ app.get("/users", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json);
   } catch (error) {
-    throw new Error(error);
+    res.status(500).send({
+      message: "Internal server error",
+    });
   }
 });
 
 app.post("/users", async (req, res) => {
   const graphql = JSON.stringify({
     query:
-      "mutation($externalUserId: String!, $name: String!) {\n  createExternalUser(input: { \n      name: $name, \n      externalUserId: $externalUserId \n    }) {\n      userId\n  }\n}",
+      "mutation($name: String!, $externalUserId: String!, $isTestUser: Boolean) {\n  createExternalUser(input: { \n      name: $name, \n      externalUserId: $externalUserId,\n      isTestUser: $isTestUser\n    }) {\n      userId\n  }\n}",
     variables: {
       name: req.body.name,
       externalUserId: req.body.externalUserId,
+      isTestUser: req.body.isTestUser,
     },
   });
 
@@ -78,7 +83,9 @@ app.post("/users", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json);
   } catch (error) {
-    throw new Error(error);
+    res.status(500).send({
+      message: "Internal server error",
+    });
   }
 });
 
@@ -94,7 +101,9 @@ app.get("/connectors", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json);
   } catch (error) {
-    throw new Error(error);
+    res.status(500).send({
+      message: "Internal server error",
+    });
   }
 });
 
@@ -117,7 +126,9 @@ app.get(
       const json = await response.json();
       res.status(200).send(json);
     } catch (error) {
-      throw new Error(error)
+      res.status(500).send({
+        message: "Internal server error",
+      });
     }
   }
 );
@@ -150,7 +161,9 @@ app.post("/userToken", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json?.data?.authorize);
   } catch (error) {
-    throw new Error(error)
+    res.status(500).send({
+      message: "Internal server error",
+    });
   }
 });
 
@@ -177,7 +190,9 @@ app.get("/authentications", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json);
   } catch (error) {
-    throw new Error(error)
+    res.status(500).send({
+      message: "Internal server error",
+    });
   }
 });
 
@@ -201,7 +216,9 @@ app.get(
         const json = await response.json();
         res.status(200).send(json);
       } catch (error) {
-        throw new Error(error)
+        res.status(500).send({
+          message: "Internal server error",
+        });
       } 
     }
   }
@@ -228,7 +245,9 @@ app.post("/authCode", async (req, res) => {
     const json = await response.json();
     res.status(200).send(json);
   } catch (error) {
-    throw new Error(error)
+    res.status(500).send({
+      message: "Internal server error",
+    });
   }
 });
 
@@ -253,7 +272,9 @@ app.post(
       const json = await response.json();
       res.status(200).send(json);
     } catch (error) {
-      throw new Error(error)
+      res.status(500).send({
+        message: "Internal server error",
+      });
     }  
   }
 );

@@ -1,5 +1,5 @@
 {
-  "name": "Proxy service for Docs explorer",
+  "name": "proxy-service-for-form-builder",
   "version": "1.0.0",
   "description": "This is a proxy for CAPI",
   "main": "index.js",
@@ -8,7 +8,7 @@
     "node": "18.x"
   },
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon -x 'node index.js || touch index.js'"
   },
   "author": "Aditya Singh",
   "license": "ISC",
