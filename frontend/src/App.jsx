@@ -3,7 +3,7 @@ import axios from "axios";
 import { useEffect, useState, useRef } from "react";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/mui";
-import { copyButtonIcon, copiedIcon, trayLogo } from "./icons";
+import { copyButtonIcon, copiedIcon, trayLogo } from "./Utils/icons.jsx";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -11,7 +11,9 @@ import FormLabel from "@mui/material/FormLabel";
 import jsonata from "jsonata";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { API_URL, PARTNER_NAME, AUTH_DIALOG_URL } from "./config";
-import { openAuthWindow } from "./AuthWindow";
+import { openAuthWindow } from "./Utils/AuthWindow";
+import { StatusCode } from "./Components/StatusCode";
+import { AutoRetryCall } from "./Utils/AutoRetryCall.js";
 
 export default function App() {
   const [connectorsList, setConnectorsList] = useState([]);
@@ -36,6 +38,7 @@ export default function App() {
   const serviceVersion = useRef("");
   const serviceId = useRef("");
   const [APIresponse, setAPIresponse] = useState({});
+  const [APIstatus, setAPIstatus] = useState(0);
   const [showAPIresponse, setShowAPIresponse] = useState(false);
   const [requiredSchema, setRequiredSchema] = useState({});
   const [formType, setFormType] = useState("required");
@@ -47,6 +50,7 @@ export default function App() {
     returnOutputSchema: false,
   });
   const [userId, setUserId] = useState("");
+  const [isTestUser, setIsTestUser] = useState(false)
   const [serviceEnvironments, setServiceEnvironments] = useState([]);
   const [selectedServiceEnvironment, setSelectedServiceEnvironment] = useState({
     id: "",
@@ -68,6 +72,7 @@ export default function App() {
       getUsers();
     }
     if (userType === "admin") {
+      setIsTestUser(false);
       (async () => {
         await getToken("admin");
         await getUserId(token.current);
@@ -95,11 +100,11 @@ export default function App() {
   useEffect(() => {
     if (authType === "existing" && selectedConnectorName && selectedConnectorVersion)
       (async () => {
-        await getAuthentications(token.current);
+        const userAuths = await getAuthentications(token.current);
         getConnectorAuthentications(
           serviceName.current,
           serviceVersion.current,
-          authentications
+          userAuths
         );
       })();
   }, [authType])
@@ -152,14 +157,17 @@ export default function App() {
           <div className="row">
             {endUsers.length !== 0 && (
               <>
-                <label className="label">Select user</label>
+                <label className="label">
+                  Select user {isTestUser && <span className="test-user">Test user</span>}
+                </label>
                 <select
                   defaultValue=""
                   onChange={async (e) => {
                     setUserId(JSON.parse(e.target.value).id);
+                    setIsTestUser(JSON.parse(e.target.value).isTestUser);
                     await getToken(JSON.parse(e.target.value).id);
                     const userAuths = await getAuthentications(token.current);
-                    if(serviceName.current !== "")
+                    if (serviceName.current !== "")
                       getConnectorAuthentications(
                         serviceName.current,
                         serviceVersion.current,
@@ -183,9 +191,6 @@ export default function App() {
                           isTestUser: option.isTestUser,
                         })}
                         key={option.id}
-                        className={`${
-                          option.isTestUser ? "test-user" : "normal-user"
-                        }`}
                       >
                         {option.name}
                         {"       "}
@@ -222,8 +227,8 @@ export default function App() {
                   isTestUser: {
                     type: "boolean",
                     description: "Do you want to mark this user as Test?",
-                    title: "Mark as test user"
-                  }
+                    title: "Mark as test user",
+                  },
                 },
                 required: ["name", "externalUserId"],
               }}
@@ -692,7 +697,7 @@ export default function App() {
             }}
           >
             <span style={{ fontWeight: "700", fontSize: "110%" }}>
-              API response:
+              Tray's API response: <StatusCode status={APIstatus}></StatusCode>
             </span>
             <button
               ref={responseCopyButtonRef}
@@ -879,6 +884,10 @@ export default function App() {
       JSON.stringify(callConnectorPayload),
       config
     );
+    setAPIstatus({
+      code: res?.status,
+      text: res?.statusText
+    });
     setAPIresponse(res?.data);
   }
 
