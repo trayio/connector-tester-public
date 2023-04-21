@@ -16,20 +16,21 @@ app.get("/test", async (req, res) => {
 
 app.get("/userId", async (req, res) => {
   const token = req.header("Authorization").split(" ")[1];
+
+  let response, json;
   try {
-    const response = await fetch("https://api.tray.io/v1/me", {
+    response = await fetch("https://api.tray.io/v1/me", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    const json = await response.json();
-    res.status(200).send(json);
+    json = await response.json();
   } catch (error) {
-    res.status(500).send({
-      message: "Internal server error"
-    });
-  } 
+    console.log("There was an error", error);
+  }
+  
+  res.status(response?.status).send(json);
 });
 
 app.get("/users", async (req, res) => {
@@ -48,15 +49,14 @@ app.get("/users", async (req, res) => {
     redirect: "follow",
   };
 
+  let response, json;
   try {
-    const response = await fetch("https://tray.io/graphql", requestOptions);
-    const json = await response.json();
-    res.status(200).send(json);
+    response = await fetch("https://tray.io/graphql", requestOptions);
+    json = await response.json();
   } catch (error) {
-    res.status(500).send({
-      message: "Internal server error",
-    });
+    console.log("There was an error", error);
   }
+  res.status(response?.status).send(json);
 });
 
 app.post("/users", async (req, res) => {
@@ -78,33 +78,34 @@ app.post("/users", async (req, res) => {
     body: graphql,
     redirect: "follow",
   };
+
+  let response, json;
   try {
-    const response = await fetch("https://tray.io/graphql", requestOptions);
-    const json = await response.json();
-    res.status(200).send(json);
+    response = await fetch("https://tray.io/graphql", requestOptions);
+    json = await response.json();
   } catch (error) {
-    res.status(500).send({
-      message: "Internal server error",
-    });
+    console.log("There was an error", error);
   }
+  res.status(response?.status).send(json);
 });
 
 app.get("/connectors", async (req, res) => {
   const token = req.header("Authorization").split(" ")[1];
-  const response = await fetch("https://api.tray.io/core/v1/connectors", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  
+  let response, json;
   try {
-    const json = await response.json();
-    res.status(200).send(json);
-  } catch (error) {
-    res.status(500).send({
-      message: "Internal server error",
+    response = await fetch("https://api.tray.io/core/v1/connectors", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
+    json = await response.json();
+  } catch (error) {
+    console.log("There was an error", error);
   }
+
+  res.status(response?.status).send(json);
 });
 
 app.get(
@@ -112,8 +113,10 @@ app.get(
   async (req, res) => {
     const token = req.header("Authorization").split(" ")[1];
     const { connectorName, connectorVersion } = { ...req.params };
+
+    let response, json;
     try {
-      const response = await fetch(
+      response = await fetch(
         `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/operations`,
         {
           method: "GET",
@@ -123,13 +126,11 @@ app.get(
           },
         }
       );
-      const json = await response.json();
-      res.status(200).send(json);
+      json = await response.json();
     } catch (error) {
-      res.status(500).send({
-        message: "Internal server error",
-      });
+      console.log("There was an error", error);
     }
+    res.status(response?.status).send(json);
   }
 );
 
@@ -156,14 +157,18 @@ app.post("/userToken", async (req, res) => {
     redirect: "follow",
   };
 
+  let response, json;
   try {
-    const response = await fetch("https://tray.io/graphql", requestOptions);
-    const json = await response.json();
-    res.status(200).send(json?.data?.authorize);
+    response = await fetch("https://tray.io/graphql", requestOptions);
+    json = await response.json();
   } catch (error) {
-    res.status(500).send({
-      message: "Internal server error",
-    });
+    console.log("There was an error", error);
+  }
+
+  if (response?.ok) {
+    res.status(response?.status).send(json?.data?.authorize);
+  } else {
+    res.status(response?.status).send(json);
   }
 });
 
@@ -185,15 +190,14 @@ app.get("/authentications", async (req, res) => {
     redirect: "follow",
   };
 
+  let response, json;
   try {
-    const response = await fetch("https://tray.io/graphql", requestOptions);
-    const json = await response.json();
-    res.status(200).send(json);
+    response = await fetch("https://tray.io/graphql", requestOptions);
+    json = await response.json();
   } catch (error) {
-    res.status(500).send({
-      message: "Internal server error",
-    });
+    console.log("There was an error", error);
   }
+  res.status(response?.status).send(json);
 });
 
 app.get(
@@ -201,9 +205,11 @@ app.get(
   async (req, res) => {
     const token = req.header("Authorization").split(" ")[1];
     const { serviceName, serviceVersion } = { ...req.params };
+    
+    let response, json;
     if (serviceName && serviceVersion) {
       try {
-        const response = await fetch(
+        response = await fetch(
           `https://api.tray.io/core/v1/services/${serviceName}/versions/${serviceVersion}/environments`,
           {
             method: "GET",
@@ -213,14 +219,12 @@ app.get(
             },
           }
         );
-        const json = await response.json();
-        res.status(200).send(json);
+        json = await response.json();
       } catch (error) {
-        res.status(500).send({
-          message: "Internal server error",
-        });
-      } 
+        console.log("There was an error", error);
+      }
     }
+    res.status(response?.status).send(json); 
   }
 );
 
@@ -240,15 +244,14 @@ app.post("/authCode", async (req, res) => {
     redirect: "follow",
   };
 
+  let response, json;
   try {
-    const response = await fetch("https://tray.io/graphql", requestOptions);
-    const json = await response.json();
-    res.status(200).send(json);
+    response = await fetch("https://tray.io/graphql", requestOptions);
+    json = await response.json();
   } catch (error) {
-    res.status(500).send({
-      message: "Internal server error",
-    });
+    console.log("There was an error", error);
   }
+  res.status(response?.status).send(json);
 });
 
 app.post(
@@ -264,18 +267,17 @@ app.post(
       body: JSON.stringify(req.body),
     };
 
+    let response, json;
     try {
-      const response = await fetch(
+      response = await fetch(
         `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/call`,
         requestOptions
       );
-      const json = await response.json();
-      res.status(200).send(json);
+      json = await response.json();
     } catch (error) {
-      res.status(500).send({
-        message: "Internal server error",
-      });
-    }  
+      console.log("There was an error: ", req, error);
+    }
+    res.status(response?.status).send(json);
   }
 );
 

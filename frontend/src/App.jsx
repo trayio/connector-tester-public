@@ -13,7 +13,7 @@ import CodeEditor from "@uiw/react-textarea-code-editor";
 import { API_URL, PARTNER_NAME, AUTH_DIALOG_URL } from "./config";
 import { openAuthWindow } from "./Utils/AuthWindow";
 import { StatusCode } from "./Components/StatusCode";
-import { AutoRetryCall } from "./Utils/AutoRetryCall.js";
+//import { AutoRetryCall } from "./Utils/AutoRetryCall.js";
 
 export default function App() {
   const [connectorsList, setConnectorsList] = useState([]);
@@ -155,7 +155,7 @@ export default function App() {
         </div>
         {userType === "existingUser" && (
           <div className="row">
-            {endUsers.length !== 0 && (
+            {endUsers?.length !== 0 && (
               <>
                 <label className="label">
                   Select user {isTestUser && <span className="test-user">Test user</span>}
@@ -879,16 +879,25 @@ export default function App() {
         "Content-Type": "application/json"
       },
     };
-    const res = await axios.post(
-      `${API_URL}/connectors/${selectedConnectorName}/versions/${selectedConnectorVersion}/call`,
-      JSON.stringify(callConnectorPayload),
-      config
-    );
-    setAPIstatus({
-      code: res?.status,
-      text: res?.statusText
-    });
-    setAPIresponse(res?.data);
+    let res;
+    try {
+      res = await axios.post(
+        `${API_URL}/connectors/${selectedConnectorName}/versions/${selectedConnectorVersion}/call`,
+        JSON.stringify(callConnectorPayload),
+        config
+      );
+      setAPIresponse(res?.data);
+      setAPIstatus({
+        code: res?.status,
+        text: res?.statusText,
+      });
+    } catch (error) {
+      setAPIresponse(error.response.data);
+      setAPIstatus({
+        code: error.response.status,
+        text: error.response.statusText,
+      });
+    }
   }
 
   async function populateDDLSchema(inputSchema, key) {
