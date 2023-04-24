@@ -23,7 +23,7 @@ Pre requisites before using this app:
 1. Clone this repo.
 2. Open terminal in the root folder of the repo.
 3. Switch to backend folder using `cd backend`
-4. Add your master token in the .env file `MASTER_TOKEN='<YOUR_MASTER_TOKEN>'`
+4. Create a .env file in the backend folder and add your master token as `MASTER_TOKEN='<YOUR_MASTER_TOKEN>'`
 5. Run `npm install`
 6. Run `npm start`
 
@@ -32,10 +32,11 @@ You server would be running on `http://localhost:5001` now.
 Now that the server is up and running successfully:
 
 1. Open a new terminal window and switch to frontend folder.
-2. Open config.js file in src folder in frontend directory.
-3. Edit the API_URL to `http://localhost:5001`. Change the PARTNER_NAME to your [embeddedId](https://tray.io/documentation/embedded/getting-started/embedded-id-and-master-token/)
-4. Run `npm install`
-5. Run `npm run dev`
+2. Open `config.js` file in src folder in frontend directory.
+3. Edit the API_URL to `http://localhost:5001`. Change the PARTNER_NAME to your [embeddedId](https://tray.io/documentation/embedded/getting-started/embedded-id-and-master-token/).
+4. (Optional step) Inside `config.js`, AUTH_DIALOG_URL by default is `embedded.tray.io`. Change it your white-labelld URL if you want to test whitelabelling.
+5. Run `npm install`
+6. Run `npm run dev`
 
 The above step should deploy the app on `http://localhost:5173`
 
