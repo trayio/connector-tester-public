@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv"
+import axios from "axios";
+import dotenv from "dotenv";
 import bodyParser from "body-parser";
 dotenv.config();
 
@@ -16,51 +17,41 @@ app.get("/test", async (req, res) => {
 
 app.get("/userId", async (req, res) => {
   const token = req.header("Authorization").split(" ")[1];
-
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://api.tray.io/v1/me", {
-      method: "GET",
+    response = await axios.get("https://api.tray.io/v1/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    json = await response.json();
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-  
-  res.status(response?.status).send(json);
+  return res.status(response?.status).send(response?.data);
 });
 
 app.get("/users", async (req, res) => {
-  const graphql = JSON.stringify({
+  const graphql = {
     query:
       "query {\n    users {\n        edges {\n            node {\n                name\n                id\n                externalUserId\n                isTestUser\n            }\n            cursor\n        }\n        pageInfo {\n          hasNextPage\n          endCursor\n          hasPreviousPage\n          startCursor\n        }\n    }\n}",
     variables: {},
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
-    },
-    body: graphql,
-    redirect: "follow",
   };
 
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://tray.io/graphql", requestOptions);
-    json = await response.json();
+    response = await axios.post("https://tray.io/graphql", graphql, {
+      headers: {
+        Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
+      },
+    });
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-  res.status(response?.status).send(json);
+  return res.status(response?.status).send(response?.data);
 });
 
 app.post("/users", async (req, res) => {
-  const graphql = JSON.stringify({
+  const graphql = {
     query:
       "mutation($name: String!, $externalUserId: String!, $isTestUser: Boolean) {\n  createExternalUser(input: { \n      name: $name, \n      externalUserId: $externalUserId,\n      isTestUser: $isTestUser\n    }) {\n      userId\n  }\n}",
     variables: {
@@ -68,44 +59,34 @@ app.post("/users", async (req, res) => {
       externalUserId: req.body.externalUserId,
       isTestUser: req.body.isTestUser,
     },
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
-    },
-    body: graphql,
-    redirect: "follow",
   };
 
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://tray.io/graphql", requestOptions);
-    json = await response.json();
+    response = await axios.post("https://tray.io/graphql", graphql, {
+      headers: {
+        Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
+      },
+    });
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-  res.status(response?.status).send(json);
+  return res.status(response?.status).send(response?.data);
 });
 
 app.get("/connectors", async (req, res) => {
   const token = req.header("Authorization").split(" ")[1];
-  
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://api.tray.io/core/v1/connectors", {
-      method: "GET",
+    response = await axios.get("https://api.tray.io/core/v1/connectors", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    json = await response.json();
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-
-  res.status(response?.status).send(json);
+  return res.status(response?.status).send(response?.data);
 });
 
 app.get(
@@ -114,90 +95,70 @@ app.get(
     const token = req.header("Authorization").split(" ")[1];
     const { connectorName, connectorVersion } = { ...req.params };
 
-    let response, json;
+    let response;
     try {
-      response = await fetch(
+      response = await axios.get(
         `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/operations`,
         {
-          method: "GET",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      json = await response.json();
     } catch (error) {
-      console.log("There was an error", error);
+      return res.status(error?.response?.status).send(error?.response?.data);
     }
-    res.status(response?.status).send(json);
+    return res.status(response?.status).send(response?.data);
   }
 );
 
 app.post("/userToken", async (req, res) => {
   if (req.body.userId === "admin") {
-    res.status(200).send({
-      accessToken: process.env.MASTER_TOKEN
+    return res.status(200).send({
+      accessToken: process.env.MASTER_TOKEN,
     });
-    return;
   }
 
-  const graphql = JSON.stringify({
+  const graphql = {
     query:
       "mutation ($userId: ID!) {\n  authorize(input: {\n      userId: $userId\n  }) {\n    accessToken\n  }\n}",
     variables: { userId: req.body.userId },
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
-    },
-    body: graphql,
-    redirect: "follow",
   };
 
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://tray.io/graphql", requestOptions);
-    json = await response.json();
+    response = await axios.post("https://tray.io/graphql", graphql, {
+      headers: {
+        Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
+      },
+    });
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-
-  if (response?.ok) {
-    res.status(response?.status).send(json?.data?.authorize);
-  } else {
-    res.status(response?.status).send(json);
-  }
+  return res.status(response?.status).send(response?.data?.data?.authorize);
 });
 
 app.get("/authentications", async (req, res) => {
   const token = req.header("Authorization").split(" ")[1];
 
-  const graphql = JSON.stringify({
+  const graphql = {
     query:
       "query {\n  viewer {\n    authentications {\n      edges {\n        node {\n          id\n          name\n          customFields\n          service {\n            id,\n            name,\n            icon,\n            title,\n            version\n          }\n          serviceEnvironment {\n              id\n              title\n          }\n        }\n      }\n      pageInfo{\n        hasNextPage\n        hasPreviousPage\n      }\n    }\n  }\n}",
     variables: {},
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: graphql,
-    redirect: "follow",
   };
 
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://tray.io/graphql", requestOptions);
-    json = await response.json();
+    response = await axios.post("https://tray.io/graphql", graphql, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-  res.status(response?.status).send(json);
+  return res.status(response?.status).send(response?.data);
 });
 
 app.get(
@@ -205,53 +166,44 @@ app.get(
   async (req, res) => {
     const token = req.header("Authorization").split(" ")[1];
     const { serviceName, serviceVersion } = { ...req.params };
-    
-    let response, json;
+    let response;
     if (serviceName && serviceVersion) {
       try {
-        response = await fetch(
+        response = await axios.get(
           `https://api.tray.io/core/v1/services/${serviceName}/versions/${serviceVersion}/environments`,
           {
-            method: "GET",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        json = await response.json();
       } catch (error) {
-        console.log("There was an error", error);
+        return res.status(error?.response?.status).send(error?.response?.data);
       }
     }
-    res.status(response?.status).send(json); 
+    return res.status(response?.status).send(response?.data);
   }
 );
 
 app.post("/authCode", async (req, res) => {
-  const graphql = JSON.stringify({
+  const graphql = {
     query:
       "mutation ($userId: ID!) {\n  generateAuthorizationCode( input: {\n    userId: $userId\n  }) {\n    authorizationCode\n  }\n}",
     variables: { userId: req.body.userId },
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
-    },
-    body: graphql,
-    redirect: "follow",
   };
 
-  let response, json;
+  let response;
   try {
-    response = await fetch("https://tray.io/graphql", requestOptions);
-    json = await response.json();
+    response = await axios.post("https://tray.io/graphql", graphql, {
+      headers: {
+        Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
+      },
+    });
   } catch (error) {
-    console.log("There was an error", error);
+    return res.status(error?.response?.status).send(error?.response?.data);
   }
-  res.status(response?.status).send(json);
+  return res.status(response?.status).send(response?.data);
 });
 
 app.post(
@@ -259,25 +211,22 @@ app.post(
   async (req, res) => {
     const token = req.header("Authorization").split(" ")[1];
     const { connectorName, connectorVersion } = { ...req.params };
-    const requestOptions = {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(req.body),
-    };
 
-    let response, json;
+    let response;
     try {
-      response = await fetch(
+      response = await axios.post(
         `https://api.tray.io/core/v1/connectors/${connectorName}/versions/${connectorVersion}/call`,
-        requestOptions
+        req.body,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      json = await response.json();
     } catch (error) {
-      console.log("There was an error: ", req, error);
+      return res.status(error?.response?.status).send(error?.response?.data);
     }
-    res.status(response?.status).send(json);
+    return res.status(response?.status).send(response?.data);
   }
 );
 

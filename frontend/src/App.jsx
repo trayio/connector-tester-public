@@ -3,7 +3,7 @@ import axios from "axios";
 import { useEffect, useState, useRef } from "react";
 import validator from "@rjsf/validator-ajv8";
 import Form from "@rjsf/mui";
-import { copyButtonIcon, copiedIcon, trayLogo } from "./Utils/icons.jsx";
+import { copyButtonIcon, copiedIcon, trayLogo } from "./icons.jsx";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -11,9 +11,9 @@ import FormLabel from "@mui/material/FormLabel";
 import jsonata from "jsonata";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { API_URL, PARTNER_NAME, AUTH_DIALOG_URL } from "./config";
-import { openAuthWindow } from "./Utils/AuthWindow";
+import { openAuthWindow } from "./Utils";
 import { StatusCode } from "./Components/StatusCode";
-//import { AutoRetryCall } from "./Utils/AutoRetryCall.js";
+//import { AutoRetryCall } from "./Utils";
 
 export default function App() {
   const [connectorsList, setConnectorsList] = useState([]);
@@ -27,7 +27,7 @@ export default function App() {
   const [inputSchema, setInputSchema] = useState({});
   const inputSchemaRef = useRef({});
   const [inputObject, setInputObject] = useState({});
-  const token = useRef("");
+  const [token, setToken] = useState("");
   const [authentications, setAuthentications] = useState([]);
   const [connectorAuthentications, setConnectorAuthentications] = useState([]);
   const [selectedAuthentication, setSelectedAuthentication] = useState({
@@ -50,19 +50,19 @@ export default function App() {
     returnOutputSchema: false,
   });
   const [userId, setUserId] = useState("");
-  const [isTestUser, setIsTestUser] = useState(false)
+  const [isTestUser, setIsTestUser] = useState(false);
   const [serviceEnvironments, setServiceEnvironments] = useState([]);
   const [selectedServiceEnvironment, setSelectedServiceEnvironment] = useState({
     id: "",
     title: "",
-    scopes: []
+    scopes: [],
   });
   const [authType, setAuthType] = useState("existing");
   const [userType, setUserType] = useState("existingUser");
   const [authError, setAuthError] = useState({
     show: false,
-    message: ""
-  })
+    message: "",
+  });
   const [endUsers, setEndUsers] = useState([]);
   const requestCopyButtonRef = useRef({});
   const responseCopyButtonRef = useRef({});
@@ -73,41 +73,100 @@ export default function App() {
     }
     if (userType === "admin") {
       setIsTestUser(false);
-      (async () => {
-        await getToken("admin");
-        await getUserId(token.current);
-        const adminAuths = await getAuthentications(token.current);
-        if(serviceName.current !== "")
-          getConnectorAuthentications(
-            serviceName.current,
-            serviceVersion.current,
-            adminAuths
-          );
-        if (connectorsList.length === 0) getConnectors(token.current);
-      })();
+      setUserId("admin");
     }
-  }, [userType])
+  }, [userType]);
 
   useEffect(() => {
-    if (connectorVersionsList.length !== 0)
-      getConnectorOperations(
-        selectedConnectorName,
-        connectorVersionsList[0],
-        token.current
+    if (connectorsList.length > 0) {
+      const versions = connectorsList
+        .filter((connector) => connector.name === selectedConnectorName)
+        .map((item) => item.version);
+      setConnectorVersionsList(versions);
+      setSelectedConnectorVersion(versions[0]);
+      getConnectorOperations(selectedConnectorName, versions[0], token);
+      setSelectedOperation("");
+      setOperationDescription("");
+      setInputObject({});
+      const selectedConnector = connectorsList.find(
+        (connector) =>
+          connector.name === selectedConnectorName &&
+          connector.version === versions[0]
       );
+      serviceId.current = selectedConnector.service.id;
+      serviceName.current = selectedConnector.service.name;
+      serviceVersion.current = selectedConnector.service.version;
+      getServiceEnvironments(serviceName.current, serviceVersion.current);
+      getConnectorAuthentications(
+        serviceName.current,
+        serviceVersion.current,
+        authentications
+      );
+      setShowAPIresponse(false);
+      setAuthError({
+        show: false,
+        message: "",
+      });
+    }
   }, [selectedConnectorName]);
 
   useEffect(() => {
-    if (authType === "existing" && selectedConnectorName && selectedConnectorVersion)
-      (async () => {
-        const userAuths = await getAuthentications(token.current);
-        getConnectorAuthentications(
-          serviceName.current,
-          serviceVersion.current,
-          userAuths
-        );
-      })();
-  }, [authType])
+    if (selectedConnectorName && selectedConnectorVersion) {
+      getConnectorOperations(
+        selectedConnectorName,
+        selectedConnectorVersion,
+        token
+      );
+      setSelectedOperation("");
+      setInputObject({});
+      const selectedConnector = connectorsList.find(
+        (connector) =>
+          connector.name === selectedConnectorName &&
+          connector.version === selectedConnectorVersion
+      );
+      serviceId.current = selectedConnector.service.id;
+      serviceName.current = selectedConnector.service.name;
+      serviceVersion.current = selectedConnector.service.version;
+      getServiceEnvironments(serviceName.current, serviceVersion.current);
+      getConnectorAuthentications(
+        serviceName.current,
+        serviceVersion.current,
+        authentications
+      );
+      setShowAPIresponse(false);
+      setAuthError({
+        show: false,
+        message: "",
+      });
+    }
+  }, [selectedConnectorVersion]);
+
+  useEffect(() => {
+    if (authType === "existing" && selectedConnectorName)
+      getAuthentications(token);
+  }, [authType]);
+
+  useEffect(() => {
+    if (userId) getToken(userId);
+  }, [userId]);
+
+  useEffect(() => {
+    if (token) getAuthentications(token);
+    if (token && connectorsList.length === 0) getConnectors(token);
+  }, [token]);
+
+  useEffect(() => {
+    if (
+      authentications.length > 0 &&
+      serviceName.current &&
+      serviceVersion.current
+    )
+      getConnectorAuthentications(
+        serviceName.current,
+        serviceVersion.current,
+        authentications
+      );
+  }, [authentications]);
 
   return (
     <div className="main">
@@ -158,24 +217,14 @@ export default function App() {
             {endUsers?.length !== 0 && (
               <>
                 <label className="label">
-                  Select user {isTestUser && <span className="test-user">Test user</span>}
+                  Select user{" "}
+                  {isTestUser && <span className="test-user">Test user</span>}
                 </label>
                 <select
                   defaultValue=""
                   onChange={async (e) => {
                     setUserId(JSON.parse(e.target.value).id);
                     setIsTestUser(JSON.parse(e.target.value).isTestUser);
-                    await getToken(JSON.parse(e.target.value).id);
-                    const userAuths = await getAuthentications(token.current);
-                    if (serviceName.current !== "")
-                      getConnectorAuthentications(
-                        serviceName.current,
-                        serviceVersion.current,
-                        userAuths
-                      );
-                    if (connectorsList.length === 0) {
-                      getConnectors(token.current);
-                    }
                   }}
                 >
                   <option value="" key="default">
@@ -247,36 +296,6 @@ export default function App() {
               defaultValue=""
               onChange={(e) => {
                 setSelectedConnectorName(e.target.value);
-                const versions = connectorsList
-                  .filter((connector) => connector.name === e.target.value)
-                  .map((item) => item.version);
-                setConnectorVersionsList(versions);
-                setSelectedConnectorVersion(versions[0]);
-                setSelectedOperation("");
-                setOperationDescription("");
-                setInputObject({});
-                const selectedConnector = connectorsList.find(
-                  (connector) =>
-                    connector.name === e.target.value &&
-                    connector.version === versions[0]
-                );
-                serviceId.current = selectedConnector.service.id;
-                serviceName.current = selectedConnector.service.name;
-                serviceVersion.current = selectedConnector.service.version;
-                getServiceEnvironments(
-                  serviceName.current,
-                  serviceVersion.current
-                );
-                getConnectorAuthentications(
-                  serviceName.current,
-                  serviceVersion.current,
-                  authentications
-                );
-                setShowAPIresponse(false);
-                setAuthError({
-                  show: false,
-                  message: "",
-                });
               }}
             >
               <option value="" key="default">
@@ -298,35 +317,6 @@ export default function App() {
               defaultValue=""
               onChange={(e) => {
                 setSelectedConnectorVersion(e.target.value);
-                getConnectorOperations(
-                  selectedConnectorName,
-                  e.target.value,
-                  token.current
-                );
-                setSelectedOperation("");
-                setInputObject({});
-                const selectedConnector = connectorsList.find(
-                  (connector) =>
-                    connector.name === selectedConnectorName &&
-                    connector.version === e.target.value
-                );
-                serviceId.current = selectedConnector.service.id;
-                serviceName.current = selectedConnector.service.name;
-                serviceVersion.current = selectedConnector.service.version;
-                getServiceEnvironments(
-                  serviceName.current,
-                  serviceVersion.current
-                );
-                getConnectorAuthentications(
-                  serviceName.current,
-                  serviceVersion.current,
-                  authentications
-                );
-                setShowAPIresponse(false);
-                setAuthError({
-                  show: false,
-                  message: "",
-                });
               }}
             >
               <option value="" key="default">
@@ -573,7 +563,9 @@ export default function App() {
           </select>
         </div>
         <div className="row">
-          <div style={{ fontSize: "125%" }}>{operationDescription}</div>
+          <div style={{ fontSize: "120%", color: "rgb(74, 84, 245)" }}>
+            {operationDescription}
+          </div>
         </div>
         <div className="row" style={{ marginTop: "0" }}>
           <FormLabel
@@ -632,7 +624,7 @@ export default function App() {
                 setRequiredSchema(onlyRequired);
               }}
               onSubmit={(e) => {
-                callConnector(token.current);
+                callConnector(token);
                 setShowAPIresponse(true);
               }}
             />
@@ -732,30 +724,27 @@ export default function App() {
   );
 
   async function getUsers() {
-    const response = await fetch(`${API_URL}/users`, {
-      method: "GET",
+    const response = await axios.get(`${API_URL}/users`, {
       headers: {
         "Content-Type": "application/json",
-      }
+      },
     });
-    const json = await response.json();
-    const users = await jsonata('$.{"id": node.id,"name": node.name,"externalUserId": node.externalUserId,"isTestUser": node.isTestUser}').evaluate(json?.data?.users?.edges); 
+    const users = await jsonata(
+      '$.{"id": node.id,"name": node.name,"externalUserId": node.externalUserId,"isTestUser": node.isTestUser}'
+    ).evaluate(response?.data?.data?.users?.edges);
     setEndUsers(users);
   }
 
   async function getToken(userId) {
     const body = {
-      userId: userId,
+      userId: userId + "1",
     };
-    const response = await fetch(`${API_URL}/userToken`, {
-      method: "POST",
+    const response = await axios.post(`${API_URL}/userToken`, body, {
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
     });
-    const json = await response.json();
-    token.current = json.accessToken;
+    setToken(response?.data?.accessToken);
   }
 
   async function createExternalUser(createUserFormData) {
@@ -763,46 +752,33 @@ export default function App() {
     const body = {
       name: name,
       externalUserId: externalUserId,
-      isTestUser: isTestUser
+      isTestUser: isTestUser,
     };
-    const response = await fetch(`${API_URL}/users`, {
-      method: "POST",
+    const response = await axios.post(`${API_URL}/users`, body, {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
     });
-    const json = await response.json();
-    return json;
-  }
-
-  async function getUserId(bearerToken) {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${bearerToken}`,
-      },
-    };
-    const res = await axios.get(`${API_URL}/userId`, config);
-    setUserId(res?.data?.username);
+    return response?.data;
   }
 
   async function getServiceEnvironments(serviceName, serviceVersion) {
     const config = {
       headers: {
-        Authorization: `Bearer ${token.current}`,
+        Authorization: `Bearer ${token}`,
       },
     };
-    const res = await axios.get(
+    const response = await axios.get(
       `${API_URL}/services/${serviceName}/versions/${serviceVersion}/environments`,
       config
     );
-    const serviceEnvironments = res?.data?.elements.map((environment) => {
+    const serviceEnvironments = response?.data?.elements.map((environment) => {
       return {
         id: environment.id,
         title: environment.title,
-        scopes: environment.scopes
-      }
-    })
+        scopes: environment.scopes,
+      };
+    });
     setServiceEnvironments(serviceEnvironments);
   }
 
@@ -812,12 +788,9 @@ export default function App() {
         Authorization: `Bearer ${bearerToken}`,
       },
     };
-    const res = await axios.get(
-      `${API_URL}/connectors`,
-      config
-    );
+    const response = await axios.get(`${API_URL}/connectors`, config);
     const sortExpression = jsonata("$^(name, >version)");
-    const sortedList = await sortExpression.evaluate(res?.data?.elements);
+    const sortedList = await sortExpression.evaluate(response?.data?.elements);
     setConnectorsList(sortedList);
     const uniqueExpression = jsonata("$distinct($.name)");
     const result = await uniqueExpression.evaluate(sortedList);
@@ -834,11 +807,11 @@ export default function App() {
         Authorization: `Bearer ${bearerToken}`,
       },
     };
-    const res = await axios.get(
+    const response = await axios.get(
       `${API_URL}/connectors/${connectorName}/versions/${connectorVersion}/operations`,
       config
     );
-    setConnectorOperations(res?.data?.elements);
+    setConnectorOperations(response?.data?.elements);
   }
 
   async function getAuthentications(bearerToken) {
@@ -847,9 +820,9 @@ export default function App() {
         Authorization: `Bearer ${bearerToken}`,
       },
     };
-    const res = await axios.get(`${API_URL}/authentications`, config);
-    setAuthentications(res?.data?.data?.viewer?.authentications?.edges);
-    return res?.data?.data?.viewer?.authentications?.edges;
+    const response = await axios.get(`${API_URL}/authentications`, config);
+    setAuthentications(response?.data?.data?.viewer?.authentications?.edges);
+    return response?.data?.data?.viewer?.authentications?.edges;
   }
 
   async function getConnectorAuthentications(
@@ -876,14 +849,14 @@ export default function App() {
     const config = {
       headers: {
         Authorization: `Bearer ${bearerToken}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
     };
     let res;
     try {
       res = await axios.post(
         `${API_URL}/connectors/${selectedConnectorName}/versions/${selectedConnectorVersion}/call`,
-        JSON.stringify(callConnectorPayload),
+        JSON.parse(callConnectorPayload),
         config
       );
       setAPIresponse(res?.data);
@@ -910,20 +883,22 @@ export default function App() {
         input: {},
         returnOutputSchema: false,
       };
-      const response = await fetch(
+      const response = await axios.post(
         `${API_URL}/connectors/${selectedConnectorName}/versions/${selectedConnectorVersion}/call`,
+        body,
         {
-          method: "POST",
           headers: {
-            Authorization: `Bearer ${token.current}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(body),
         }
       );
-      const json = await response.json();
-      const enums = await jsonata(`output.result.value`).evaluate(json);
-      const enumNames = await jsonata(`output.result.text`).evaluate(json);
+      const enums = await jsonata(`output.result.value`).evaluate(
+        response?.data
+      );
+      const enumNames = await jsonata(`output.result.text`).evaluate(
+        response?.data
+      );
       if (Array.isArray(enums)) {
         const newInputSchema = await jsonata(`$~>|**|{
     "enum":lookup.operation=$operation?$enumValues,
@@ -945,13 +920,13 @@ export default function App() {
       const bodyInputObject = {};
       inputs.forEach(
         (input) =>
-          bodyInputObject[input] =
+          (bodyInputObject[input] =
             formData[
               ddlOperation.input[input].slice(
                 ddlOperation.input[input].lastIndexOf("{") + 1,
                 ddlOperation.input[input].indexOf("}")
               )
-            ]
+            ])
       );
       if (
         inputs.every(
@@ -970,21 +945,23 @@ export default function App() {
           input: bodyInputObject,
           returnOutputSchema: false,
         };
-        const response = await fetch(
+        const response = await axios.post(
           `${API_URL}/connectors/${selectedConnectorName}/versions/${selectedConnectorVersion}/call`,
+          body,
           {
-            method: "POST",
             headers: {
-              Authorization: `Bearer ${token.current}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(body),
           }
         );
-        const json = await response.json();
-        const enums = await jsonata(`[output.result.value]`).evaluate(json);
-        const enumNames = await jsonata(`[output.result.text]`).evaluate(json);
-        if (enums.length>0) {
+        const enums = await jsonata(`[output.result.value]`).evaluate(
+          response?.data
+        );
+        const enumNames = await jsonata(`[output.result.text]`).evaluate(
+          response?.data
+        );
+        if (enums.length > 0) {
           const newInputSchema = await jsonata(`$~>|**|{
     "enum":lookup.operation=$operation?$enumValues,
     "enumNames":lookup.operation=$operation?$enumLabels
@@ -1004,18 +981,12 @@ export default function App() {
     const body = {
       userId: userId,
     };
-    const response = await fetch(
-      `${API_URL}/authCode`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body),
-      }
-    );
-    const json = await response.json();
-    return json;
+    const response = await axios.post(`${API_URL}/authCode`, body, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response?.data;
   }
 
   async function openAuthDialog(json) {
