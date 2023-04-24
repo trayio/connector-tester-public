@@ -214,7 +214,7 @@ export default function App() {
         </div>
         {userType === "existingUser" && (
           <div className="row">
-            {endUsers?.length !== 0 && (
+            {endUsers.length > 0 && (
               <>
                 <label className="label">
                   Select user{" "}
@@ -230,7 +230,7 @@ export default function App() {
                   <option value="" key="default">
                     Select user
                   </option>
-                  {endUsers.map((option, index) => {
+                  {endUsers.map((option) => {
                     return (
                       <option
                         value={JSON.stringify({
@@ -732,7 +732,7 @@ export default function App() {
     const users = await jsonata(
       '$.{"id": node.id,"name": node.name,"externalUserId": node.externalUserId,"isTestUser": node.isTestUser}'
     ).evaluate(response?.data?.data?.users?.edges);
-    setEndUsers(users);
+    if (users) setEndUsers(users);
   }
 
   async function getToken(userId) {
