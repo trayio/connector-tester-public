@@ -26,7 +26,7 @@ export const openAuthWindow = (url) => {
   const CHECK_TIMEOUT = 1000;
   const checkClosedWindow = () => {
     if (authWindow.closed) {
-        window.removeEventListener("message", onmessage);
+      window.removeEventListener("message", onmessage);
     } else {
       setTimeout(checkClosedWindow, CHECK_TIMEOUT);
     }
@@ -34,4 +34,19 @@ export const openAuthWindow = (url) => {
 
   checkClosedWindow();
   authWindow.location = url;
+};
+
+const debounce = (fn) => {
+  let timeoutId;
+
+  return (arg) => {
+    // cancel the previous timer
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    // setup a new timer
+    timeoutId = setTimeout(() => {
+      fn(arg);
+    }, 500);
+  };
 };
