@@ -737,7 +737,7 @@ export default function App() {
 
   async function getToken(userId) {
     const body = {
-      userId: userId + "1",
+      userId: userId,
     };
     const response = await axios.post(`${API_URL}/userToken`, body, {
       headers: {
