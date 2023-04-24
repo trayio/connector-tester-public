@@ -129,7 +129,8 @@ button[type="submit"] {
   padding: 4px 16px !important;
 }
 
-.copyButton{
+.copy-button,
+.response-copy-button {
   position: absolute;
   top: 3rem;
   right: 0.5rem;
@@ -137,22 +138,26 @@ button[type="submit"] {
   z-index: 1;
 }
 
-.test-user{
-  background: #E0EAFB;
-  color: #5C94EC;
+.response-copy-button {
+  top: 4rem;
+}
+
+.test-user {
+  background: #e0eafb;
+  color: #5c94ec;
   padding: 5px;
   font-size: 1rem;
   margin-left: 0.5rem;
   margin-bottom: 2rem;
 }
 
-.http-status{
+.http-status {
   height: 2rem;
   padding: 0.2rem 0.5rem;
 }
 
-.http-status::before{
-  content: '';
+.http-status::before {
+  content: "";
   border-radius: 50%;
   display: inline-block;
   width: 1rem;
@@ -161,10 +166,10 @@ button[type="submit"] {
   margin-top: 0.1rem;
 }
 
-.http-status.success-code::before{
+.http-status.success-code::before {
   background: green;
 }
 
-.http-status.error-code::before{
+.http-status.error-code::before {
   background: red;
 }

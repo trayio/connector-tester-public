@@ -651,7 +651,7 @@ export default function App() {
             </span>
             <button
               ref={requestCopyButtonRef}
-              className="copyButton"
+              className="copy-button"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
               onClick={(e) => {
                 navigator.clipboard.writeText(
@@ -693,11 +693,11 @@ export default function App() {
             </span>
             <button
               ref={responseCopyButtonRef}
-              className="copyButton"
+              className="response-copy-button"
               dangerouslySetInnerHTML={{ __html: copyButtonIcon }}
               onClick={async (e) => {
                 navigator.clipboard.writeText(
-                  JSON.stringify(callConnectorPayload, null, 4)
+                  JSON.stringify(APIresponse, null, 4)
                 );
                 responseCopyButtonRef.current.innerHTML = copiedIcon;
                 setTimeout(() => {
