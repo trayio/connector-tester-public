@@ -852,17 +852,17 @@ export default function App() {
         "Content-Type": "application/json",
       },
     };
-    let res;
+    let response;
     try {
-      res = await axios.post(
+      response = await axios.post(
         `${API_URL}/connectors/${selectedConnectorName}/versions/${selectedConnectorVersion}/call`,
-        JSON.parse(callConnectorPayload),
+        JSON.stringify(callConnectorPayload),
         config
       );
-      setAPIresponse(res?.data);
+      setAPIresponse(response?.data);
       setAPIstatus({
-        code: res?.status,
-        text: res?.statusText,
+        code: response?.status,
+        text: response?.statusText,
       });
     } catch (error) {
       setAPIresponse(error.response.data);
