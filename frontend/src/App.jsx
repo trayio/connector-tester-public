@@ -893,13 +893,13 @@ export default function App() {
           },
         }
       );
-      const enums = await jsonata(`output.result.value`).evaluate(
+      const enums = await jsonata(`[output.result.value]`).evaluate(
         response?.data
       );
-      const enumNames = await jsonata(`output.result.text`).evaluate(
+      const enumNames = await jsonata(`[output.result.text]`).evaluate(
         response?.data
       );
-      if (Array.isArray(enums)) {
+      if (enums.length > 0) {
         const newInputSchema = await jsonata(`$~>|**|{
     "enum":lookup.operation=$operation?$enumValues,
     "enumNames":lookup.operation=$operation?$enumLabels
