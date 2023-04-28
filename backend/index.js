@@ -16,12 +16,11 @@ app.get("/test", async (req, res) => {
 });
 
 app.get("/userId", async (req, res) => {
-  const token = req.header("Authorization").split(" ")[1];
   let response;
   try {
     response = await axios.get("https://api.tray.io/v1/me", {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${process.env.MASTER_TOKEN}`,
       },
     });
   } catch (error) {

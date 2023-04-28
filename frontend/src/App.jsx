@@ -73,7 +73,7 @@ export default function App() {
     }
     if (userType === "admin") {
       setIsTestUser(false);
-      setUserId("admin");
+      getUserId();
     }
   }, [userType]);
 
@@ -147,7 +147,8 @@ export default function App() {
   }, [authType]);
 
   useEffect(() => {
-    if (userId) getToken(userId);
+    if (userId && userType === "existingUser") getToken(userId);
+    if (userType === "admin") getToken("admin");
   }, [userId]);
 
   useEffect(() => {
@@ -722,6 +723,11 @@ export default function App() {
       </div>
     </div>
   );
+
+  async function getUserId() {
+    const response = await axios.get(`${API_URL}/userId`);
+    setUserId(response?.data?.username);
+  }
 
   async function getUsers() {
     const response = await axios.get(`${API_URL}/users`, {
