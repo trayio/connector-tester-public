@@ -19,7 +19,7 @@
     "axios": "^1.3.6"
   },
   "devDependencies": {
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.1.4",
     "nodemon": "^2.0.22"
   }
 }
